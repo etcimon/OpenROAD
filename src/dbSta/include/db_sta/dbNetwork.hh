@@ -25,6 +25,18 @@
 
 namespace sta {
 
+// The lower 3 bits of an 8-byte-aligned odb pointer record which pin
+// object it is, so a pin query does not chase the database type word.
+static constexpr std::uintptr_t kPinPointerTagMask = std::uintptr_t(0b111U);
+
+enum class PinPointerTags : std::uintptr_t
+{
+  kNone = 0U,
+  kDbIterm = 1U,
+  kDbBterm = 2U,
+  kDbModIterm = 3U,
+};
+
 class dbNetwork;
 class dbEditHierarchy;
 
@@ -102,10 +114,39 @@ class dbNetwork : public ConcreteNetwork
   void staToDb(const Instance* instance,
                odb::dbInst*& db_inst,
                odb::dbModInst*& mod_inst) const;
+  // Inlined: callgrind spent 6% of a repair run in this call, and the body
+  // is a tag mask. Behavior is the same as the previous out-of-line function.
   void staToDb(const Pin* pin,
                odb::dbITerm*& iterm,
                odb::dbBTerm*& bterm,
-               odb::dbModITerm*& moditerm) const;
+               odb::dbModITerm*& moditerm) const
+  {
+    iterm = nullptr;
+    bterm = nullptr;
+    moditerm = nullptr;
+    const auto tagged = reinterpret_cast<std::uintptr_t>(pin);
+    const auto tag = static_cast<PinPointerTags>(tagged & kPinPointerTagMask);
+    const char* const raw = reinterpret_cast<const char*>(pin);
+    char* const untagged = const_cast<char*>(
+        raw - static_cast<std::uintptr_t>(tag));
+    if (untagged == nullptr) {
+      return;
+    }
+    switch (tag) {
+      case PinPointerTags::kDbIterm:
+        iterm = reinterpret_cast<odb::dbITerm*>(untagged);
+        break;
+      case PinPointerTags::kDbBterm:
+        bterm = reinterpret_cast<odb::dbBTerm*>(untagged);
+        break;
+      case PinPointerTags::kDbModIterm:
+        moditerm = reinterpret_cast<odb::dbModITerm*>(untagged);
+        break;
+      case PinPointerTags::kNone:
+        logger_->error(ORD, 2018, "Pin is not ITerm or BTerm or modITerm.");
+        break;
+    }
+  }
   odb::dbObject* staToDb(const Pin* pin) const;
 
   odb::dbNet* staToDb(const Net* net) const;

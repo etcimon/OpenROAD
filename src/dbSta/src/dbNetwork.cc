@@ -290,17 +290,6 @@ ObjectId dbNetwork::getDbNwkObjectId(const dbObject* object) const
 // to avoid having to call into the database to figure out the
 // type information, which requires a lot of pointer indirection.
 
-// Used to get the value of the pointer tag.
-static constexpr std::uintptr_t kPointerTagMask = std::uintptr_t(0b111U);
-
-enum class PinPointerTags : std::uintptr_t
-{
-  kNone = 0U,
-  kDbIterm = 1U,
-  kDbBterm = 2U,
-  kDbModIterm = 3U,
-};
-
 //
 // check the leaves accessible from the network
 // match those accessible from block.
@@ -2019,7 +2008,7 @@ ObjectId dbNetwork::id(const Pin* pin) const
     // get the id for hierarchical/chip objects using dbid (strip the
     // pointer tag first).
     std::uintptr_t tag_value
-        = reinterpret_cast<std::uintptr_t>(pin) & kPointerTagMask;
+        = reinterpret_cast<std::uintptr_t>(pin) & kPinPointerTagMask;
     // Need to cast to char pin to avoid compiler error for pointer
     // arithmetic on incomplete types
     const char* char_pin = reinterpret_cast<const char*>(pin);
@@ -3844,45 +3833,6 @@ dbBlock* dbNetwork::getBlockOf(const Pin* pin) const
   }
   assert(block != nullptr && "Pin must belong to a block.");
   return block;
-}
-
-void dbNetwork::staToDb(const Pin* pin,
-                        // Return values.
-                        dbITerm*& iterm,
-                        dbBTerm*& bterm,
-                        dbModITerm*& moditerm) const
-{
-  iterm = nullptr;
-  bterm = nullptr;
-  moditerm = nullptr;
-
-  // Get the value of the tag
-  std::uintptr_t pointer_with_tag = reinterpret_cast<std::uintptr_t>(pin);
-  PinPointerTags tag_value
-      = static_cast<PinPointerTags>(pointer_with_tag & kPointerTagMask);
-
-  // Cast to char* and avoid casting an integral type to pointer type
-  // by doing pointer arithmetic. Compiler apparently prefer this sytle.
-  const char* char_pointer_pin = reinterpret_cast<const char*>(pin);
-  char* pointer_without_tag = const_cast<char*>(
-      char_pointer_pin - static_cast<std::uintptr_t>(tag_value));
-
-  if (pointer_without_tag) {
-    switch (tag_value) {
-      case PinPointerTags::kDbIterm:
-        iterm = reinterpret_cast<dbITerm*>(pointer_without_tag);
-        break;
-      case PinPointerTags::kDbBterm:
-        bterm = reinterpret_cast<dbBTerm*>(pointer_without_tag);
-        break;
-      case PinPointerTags::kDbModIterm:
-        moditerm = reinterpret_cast<dbModITerm*>(pointer_without_tag);
-        break;
-      case PinPointerTags::kNone:
-        logger_->error(ORD, 2018, "Pin is not ITerm or BTerm or modITerm.");
-        break;
-    }
-  }
 }
 
 dbObject* dbNetwork::staToDb(const Pin* pin) const

@@ -1,9 +1,12 @@
 [submodule "module/OpenSTA"]
 	path = src/sta
-	url = ../../The-OpenROAD-Project/OpenSTA.git
+	url = https://github.com/etcimon/OpenSTA.git
+	branch = g6lc
 [submodule "src/abc"]
 	path = third-party/abc
-	url = ../../The-OpenROAD-Project/abc.git
+	url = https://github.com/etcimon/abc.git
+	branch = g6lc
 [submodule "third-party/slang-elab"]
 	path = third-party/slang-elab
-	url = ../../povik/yosys-slang.git
+	url = https://github.com/etcimon/sv-elab.git
+	branch = g6lc
