@@ -437,13 +437,27 @@ std::vector<EndpointSlack> Timing::getEndpointSlacks(MinMax minmax)
   sta::dbSta* sta = getSta();
   cmdLinkedNetwork();
 
+  // Propagate required times once. Per-endpoint slack() repeats that search.
+  sta->findRequireds();
+  const sta::MinMax* mm = getMinMax(minmax);
+  const sta::SceneSet scenes = sta::Scene::sceneSet(sta->scenes());
   std::vector<EndpointSlack> result;
+  result.reserve(sta->endpoints().size());
   for (sta::Vertex* vertex : sta->endpoints()) {
-    const sta::Pin* pin = vertex->pin();
-    float slack = sta->slack(
-        pin, sta::RiseFallBoth::riseFall(), sta->scenes(), getMinMax(minmax));
-    auto [iterm, bterm] = staToDBPin(pin);
-    result.push_back({iterm, bterm, slack});
+    sta::Slack worst = sta::MinMax::min()->initValue();
+    sta::VertexPathIterator path_iter(vertex, nullptr, mm, sta);
+    while (path_iter.hasNext()) {
+      sta::Path* path = path_iter.next();
+      if (!scenes.contains(path->scene(sta))) {
+        continue;
+      }
+      const sta::Slack path_slack = path->slack(sta);
+      if (sta::delayLess(path_slack, worst, sta)) {
+        worst = path_slack;
+      }
+    }
+    auto [iterm, bterm] = staToDBPin(vertex->pin());
+    result.push_back({iterm, bterm, sta::delayAsFloat(worst)});
   }
   return result;
 }
@@ -557,18 +571,20 @@ std::vector<TimingPathInfo> Timing::getTimingPaths(MinMax minmax,
       const float slw = sta::delayAsFloat(ref->slew(sta));
       const float pin_delay = arr - arrival_prev;
 
-      // Compute fanout
+      // Wire fanout leaves a driver. A load pin's out-edges are cell arcs.
       int node_fanout = 0;
-      sta::VertexOutEdgeIterator iter(vertex, graph);
-      while (iter.hasNext()) {
-        sta::Edge* edge = iter.next();
-        if (edge->isWire()) {
-          const sta::Pin* to_pin = edge->to(graph)->pin();
-          if (network->isTopLevelPort(to_pin)) {
-            sta::Port* port = network->port(to_pin);
-            node_fanout += sdc->portExtFanout(port, sta::MinMax::max()) + 1;
-          } else {
-            node_fanout++;
+      if (network->isDriver(pin)) {
+        sta::VertexOutEdgeIterator iter(vertex, graph);
+        while (iter.hasNext()) {
+          sta::Edge* edge = iter.next();
+          if (edge->isWire()) {
+            const sta::Pin* to_pin = edge->to(graph)->pin();
+            if (network->isTopLevelPort(to_pin)) {
+              sta::Port* port = network->port(to_pin);
+              node_fanout += sdc->portExtFanout(port, sta::MinMax::max()) + 1;
+            } else {
+              node_fanout++;
+            }
           }
         }
       }

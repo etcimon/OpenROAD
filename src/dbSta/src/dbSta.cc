@@ -57,6 +57,7 @@
 #include "sta/Parasitics.hh"
 #include "sta/ParasiticsClass.hh"
 #include "sta/Path.hh"
+#include "sta/Scene.hh"
 #include "sta/PortDirection.hh"
 #include "sta/ReportTcl.hh"
 #include "sta/Sdc.hh"
@@ -873,6 +874,25 @@ void dbSta::reportCellUsage(odb::dbModule* module,
   }
 }
 
+// Slack already stored on the vertex. Caller has run findRequireds().
+Slack storedVertexSlack(Sta* sta, Vertex* vertex, const MinMax* min_max)
+{
+  const SceneSet scenes = Scene::sceneSet(sta->scenes());
+  Slack slack = MinMax::min()->initValue();
+  VertexPathIterator path_iter(vertex, nullptr, min_max, sta);
+  while (path_iter.hasNext()) {
+    Path* path = path_iter.next();
+    if (!scenes.contains(path->scene(sta))) {
+      continue;
+    }
+    const Slack path_slack = path->slack(sta);
+    if (delayLess(path_slack, slack, sta)) {
+      slack = path_slack;
+    }
+  }
+  return slack;
+}
+
 // bin_size: fixed bin width in user time units (e.g., ns).
 //           If 0.0, num_bins is used to determine bin width automatically.
 void dbSta::reportTimingHistogram(int num_bins,
@@ -887,9 +907,12 @@ void dbSta::reportTimingHistogram(int num_bins,
 
   sta::Unit* time_unit = sta_->units()->timeUnit();
   utl::Histogram<float> histogram(logger_);
+  // One required-time propagation. slack(vertex) would seed every endpoint
+  // again.
+  sta_->findRequireds();
   for (sta::Vertex* vertex : sta_->endpoints()) {
-    float slack
-        = sta::delayAsFloat(sta_->slack(vertex, min_max), min_max, sta_);
+    float slack = sta::delayAsFloat(
+        storedVertexSlack(sta_, vertex, min_max), min_max, sta_);
     if (slack != sta::INF) {  // Ignore unconstrained paths.
       histogram.addData(time_unit->staToUser(slack));
     }
@@ -1081,6 +1104,28 @@ void dbSta::checkSanityDrvrVertexEdges(const Pin* pin) const
   }
 }
 
+namespace {
+// Leaf outputs and top-level inputs are the only pins Network::isDriver
+// accepts. Power and ground are never drivers. Skipping the rest avoids a
+// STA pin lookup on every load of a gate.
+bool signalMayDrive(odb::dbSigType sig, odb::dbIoType io, bool top_port)
+{
+  if (sig == odb::dbSigType::POWER || sig == odb::dbSigType::GROUND) {
+    return false;
+  }
+  switch (io.getValue()) {
+    case odb::dbIoType::INOUT:
+    case odb::dbIoType::FEEDTHRU:
+      return true;
+    case odb::dbIoType::OUTPUT:
+      return !top_port;
+    case odb::dbIoType::INPUT:
+      return top_port;
+  }
+  return false;
+}
+}  // namespace
+
 void dbSta::checkSanityNetlistConsistency() const
 {
   odb::dbBlock* block = db_->getChip()->getBlock();
@@ -1088,16 +1133,17 @@ void dbSta::checkSanityNetlistConsistency() const
     return;
   }
 
-  // Check all ITerms
+  // Drivers only. A load pin cannot own an STA wire edge.
   for (odb::dbITerm* iterm : block->getITerms()) {
-    if (iterm->getNet() != nullptr) {
+    if (iterm->getNet() != nullptr
+        && signalMayDrive(iterm->getSigType(), iterm->getIoType(), false)) {
       checkSanityDrvrVertexEdges(iterm);
     }
   }
 
-  // Check BTerms
   for (odb::dbBTerm* bterm : block->getBTerms()) {
-    if (bterm->getNet() != nullptr) {
+    if (bterm->getNet() != nullptr
+        && signalMayDrive(bterm->getSigType(), bterm->getIoType(), true)) {
       checkSanityDrvrVertexEdges(bterm);
     }
   }
