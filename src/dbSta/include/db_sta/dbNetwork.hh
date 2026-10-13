@@ -143,7 +143,7 @@ class dbNetwork : public ConcreteNetwork
         moditerm = reinterpret_cast<odb::dbModITerm*>(untagged);
         break;
       case PinPointerTags::kNone:
-        logger_->error(ORD, 2018, "Pin is not ITerm or BTerm or modITerm.");
+        logger_->error(utl::ORD, 2018, "Pin is not ITerm or BTerm or modITerm.");
         break;
     }
   }
