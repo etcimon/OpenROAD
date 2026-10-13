@@ -154,16 +154,13 @@ bool Timing::isTimeInf(float time)
   return (time > 1e+10 || time < -1e+10);
 }
 
-float Timing::getPinArrivalTime(sta::Clock* clk,
-                                const sta::RiseFall* clk_rf,
-                                sta::Vertex* vertex,
-                                const sta::RiseFall* rf)
+float Timing::getPinArrivalTime(sta::Vertex* vertex,
+                                const sta::RiseFall* rf,
+                                const sta::MinMax* minmax)
 {
   sta::dbSta* sta = getSta();
-  (void) clk;
-  (void) clk_rf;
-  return sta::delayAsFloat(sta->arrival(
-      vertex, rf->asRiseFallBoth(), sta->scenes(), sta::MinMax::max()));
+  return sta::delayAsFloat(
+      sta->arrival(vertex, rf->asRiseFallBoth(), sta->scenes(), minmax));
 }
 
 sta::ClockSeq Timing::findClocksMatching(const char* pattern,
@@ -192,28 +189,21 @@ float Timing::getPinArrival(odb::dbBTerm* db_pin, RiseFall rf, MinMax minmax)
 
 float Timing::getPinArrival(sta::Pin* sta_pin, RiseFall rf, MinMax minmax)
 {
+  // The previous body called findClocksMatching("*") and arrival() twice per
+  // clock. getPinArrivalTime ignored the clock, and it always asked for the
+  // max arrival, so every extra call repeated one number. Arrival already
+  // folds the clock tags on the vertex. Ask once, and honor minmax (hold).
   auto vertex_array = vertices(sta_pin);
+  const sta::MinMax* mm = getMinMax(minmax);
   float delay = (minmax == Max) ? -sta::INF : sta::INF;
-  float d1, d2;
-  sta::Clock* default_arrival_clock
-      = getSta()->cmdMode()->sdc()->defaultArrivalClock();
-  for (auto vertex : vertex_array) {
+  const sta::RiseFall* arrive
+      = (rf == Rise) ? sta::RiseFall::rise() : sta::RiseFall::fall();
+  for (auto* vertex : vertex_array) {
     if (vertex == nullptr) {
       continue;
     }
-    const sta::RiseFall* clk_r = sta::RiseFall::rise();
-    const sta::RiseFall* clk_f = sta::RiseFall::fall();
-    const sta::RiseFall* arrive_hold = (rf == Rise) ? clk_r : clk_f;
-    d1 = getPinArrivalTime(nullptr, clk_r, vertex, arrive_hold);
-    d2 = getPinArrivalTime(default_arrival_clock, clk_r, vertex, arrive_hold);
-    delay = (minmax == Max) ? std::max({d1, d2, delay})
-                            : std::min({d1, d2, delay});
-    for (auto clk : findClocksMatching("*", false, false)) {
-      d1 = getPinArrivalTime(clk, clk_r, vertex, arrive_hold);
-      d2 = getPinArrivalTime(clk, clk_f, vertex, arrive_hold);
-      delay = (minmax == Max) ? std::max({d1, d2, delay})
-                              : std::min({d1, d2, delay});
-    }
+    const float arrival = getPinArrivalTime(vertex, arrive, mm);
+    delay = (minmax == Max) ? std::max(delay, arrival) : std::min(delay, arrival);
   }
   return delay;
 }

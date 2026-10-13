@@ -558,6 +558,11 @@ void EstimateParasitics::updateParasitics()
         109,
         "updateParasitics() called with incremental parasitics disabled");
   }
+  // No edited net. Clearing the STA network here walks the driver cache for
+  // a design that did not change. Same rule as an empty dirty set: return.
+  if (parasitics_invalid_.empty()) {
+    return;
+  }
 
   // Call clearNetDrvrPinMap only without full blown ConcreteNetwork::clear()
   // This is because netlist changes may invalidate cached net driver pin data

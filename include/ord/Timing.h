@@ -9,6 +9,7 @@
 
 #include "sta/Clock.hh"
 #include "sta/Graph.hh"
+#include "sta/MinMax.hh"
 #include "sta/PatternMatch.hh"
 #include "sta/Sdc.hh"
 #include "sta/SdcClass.hh"
@@ -166,10 +167,11 @@ class Timing
                                  sta::Clock* clk,
                                  const sta::RiseFall* clk_rf,
                                  sta::Vertex* vertex);
-  float getPinArrivalTime(sta::Clock* clk,
-                          const sta::RiseFall* clk_rf,
-                          sta::Vertex* vertex,
-                          const sta::RiseFall* arrive_hold);
+  // One arrival query. sta::Sta::arrival already folds clock tags, so a
+  // per-clock scan does not change the result.
+  float getPinArrivalTime(sta::Vertex* vertex,
+                          const sta::RiseFall* arrive_hold,
+                          const sta::MinMax* minmax);
   sta::Graph* cmdGraph();
   sta::Network* cmdLinkedNetwork();
   std::pair<odb::dbITerm*, odb::dbBTerm*> staToDBPin(const sta::Pin* pin);
