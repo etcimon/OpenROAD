@@ -28,6 +28,7 @@
 #include "utl/decode.h"
 
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -36,32 +37,45 @@
 
 namespace utl {
 
-static const std::string base64_chars
-    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      "abcdefghijklmnopqrstuvwxyz"
-      "0123456789+/";
-
-static inline bool is_base64(const unsigned char c)
+// Index of each alphabet character. -1 is not in the alphabet. string::find
+// walked the 64-character alphabet once per input byte; the Steiner tables
+// are millions of those bytes.
+const int8_t* base64Value()
 {
-  return (isalnum(c) || (c == '+') || (c == '/'));
+  static int8_t table[256];
+  static const bool ready = [] {
+    for (int i = 0; i < 256; i++) {
+      table[i] = -1;
+    }
+    const char alphabet[]
+        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    for (int i = 0; alphabet[i] != '\0'; i++) {
+      table[static_cast<unsigned char>(alphabet[i])] = static_cast<int8_t>(i);
+    }
+    return true;
+  }();
+  (void) ready;
+  return table;
 }
 
 std::string base64_decode(const std::string& encoded_string)
 {
-  int in_len = encoded_string.size();
+  const int8_t* const value = base64Value();
+  const int in_len = static_cast<int>(encoded_string.size());
   int i = 0;
-  int j = 0;
   int in_ = 0;
-  char char_array_4[4], char_array_3[3];
+  unsigned char char_array_4[4];
+  char char_array_3[3];
   std::string ret;
+  ret.reserve(encoded_string.size() / 4 * 3);
 
-  while (in_len-- && (encoded_string[in_] != '=')
-         && is_base64(encoded_string[in_])) {
-    char_array_4[i++] = encoded_string[in_];
+  while (in_len > in_ && encoded_string[in_] != '='
+         && value[static_cast<unsigned char>(encoded_string[in_])] >= 0) {
+    char_array_4[i++] = static_cast<unsigned char>(encoded_string[in_]);
     in_++;
     if (i == 4) {
       for (i = 0; i < 4; i++) {
-        char_array_4[i] = base64_chars.find(char_array_4[i]);
+        char_array_4[i] = static_cast<unsigned char>(value[char_array_4[i]]);
       }
 
       char_array_3[0]
@@ -70,30 +84,27 @@ std::string base64_decode(const std::string& encoded_string)
           = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
       char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
 
-      for (i = 0; (i < 3); i++) {
-        ret += char_array_3[i];
-      }
+      ret.append(char_array_3, 3);
       i = 0;
     }
   }
 
   if (i) {
-    for (j = i; j < 4; j++) {
-      char_array_4[j] = 0;
+    // A short final group used to look up a 0 byte, which is not in the
+    // alphabet, so find() returned npos and the shift saw -1.
+    int vals[4];
+    for (int j = 0; j < i; j++) {
+      vals[j] = value[char_array_4[j]];
+    }
+    for (int j = i; j < 4; j++) {
+      vals[j] = -1;
     }
 
-    for (j = 0; j < 4; j++) {
-      char_array_4[j] = base64_chars.find(char_array_4[j]);
-    }
+    char_array_3[0] = (vals[0] << 2) + ((vals[1] & 0x30) >> 4);
+    char_array_3[1] = ((vals[1] & 0xf) << 4) + ((vals[2] & 0x3c) >> 2);
+    char_array_3[2] = ((vals[2] & 0x3) << 6) + vals[3];
 
-    char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-    char_array_3[1]
-        = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-    char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-    for (j = 0; (j < i - 1); j++) {
-      ret += char_array_3[j];
-    }
+    ret.append(char_array_3, i - 1);
   }
 
   return ret;

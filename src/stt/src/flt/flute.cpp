@@ -148,15 +148,14 @@ static const char* readDecimalInt(const char* s, int& value)
 // Init LUTs from base64 encoded string variables.
 void Flute::initLUT(const int to_d, LutType lut, NumSoln numsoln)
 {
-  const std::string pwv_string = utl::base64_decode(powv9);
+  // Degree 8 is decoded at startup and degree 9 later. The bytes do not
+  // change, so decode each table once.
+  static const std::string pwv_string = utl::base64_decode(powv9);
   const char* pwv = pwv_string.c_str();
 
-  std::string prt_string;
-  const char* prt = nullptr;
-  if (kConstructRouting) {
-    prt_string = utl::base64_decode(post9);
-    prt = prt_string.c_str();
-  }
+  static const std::string prt_string
+      = kConstructRouting ? utl::base64_decode(post9) : std::string();
+  const char* prt = kConstructRouting ? prt_string.c_str() : nullptr;
 
   for (int d = 4; d <= to_d; d++) {
     if (pwv[0] == 'd' && pwv[1] == '=') {
