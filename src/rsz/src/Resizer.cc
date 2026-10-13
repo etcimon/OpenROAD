@@ -4758,7 +4758,7 @@ void Resizer::gateDelays(const sta::LibertyPort* drvr_port,
         } else {
           in_slew = tgt_slews_[in_rf->index()];
         }
-        sta::LoadPinIndexMap load_pin_index_map(network_);
+        sta::LoadPinIndexMap load_pin_index_map;
         sta::ArcDcalcResult dcalc_result
             = arc_delay_calc->gateDelay(nullptr,
                                         arc,
@@ -4799,7 +4799,7 @@ void Resizer::gateDelays(const sta::LibertyPort* drvr_port,
       for (sta::TimingArc* arc : arc_set->arcs()) {
         const sta::RiseFall* in_rf = arc->fromEdge()->asRiseFall();
         int out_rf_index = arc->toEdge()->asRiseFall()->index();
-        sta::LoadPinIndexMap load_pin_index_map(network_);
+        sta::LoadPinIndexMap load_pin_index_map;
         sta::ArcDcalcResult dcalc_result
             = arc_delay_calc_->gateDelay(nullptr,
                                          arc,
@@ -5036,7 +5036,7 @@ void Resizer::cellWireDelay(sta::LibertyPort* drvr_port,
   delay = -sta::INF;
   slew = -sta::INF;
 
-  sta::LoadPinIndexMap load_pin_index_map(network_);
+  sta::LoadPinIndexMap load_pin_index_map;
   load_pin_index_map[load_pin] = 0;
   for (sta::Scene* corner : sta->scenes()) {
     estimate_parasitics_->makeWireParasitic(
@@ -6290,7 +6290,7 @@ void Resizer::findSwapPinCandidate(sta::LibertyPort* input_port,
         in_slew = tgt_slews_[in_rf->index()];
       }
 
-      sta::LoadPinIndexMap load_pin_index_map(network_);
+      sta::LoadPinIndexMap load_pin_index_map;
       sta::ArcDcalcResult dcalc_result
           = arc_delay_calc_->gateDelay(nullptr,
                                        arc,

@@ -55,7 +55,7 @@ TEST_F(TestLambertW, ValidateRandomPImodels)
   TimingArc* arc = arc_set->arcs().front();
   ASSERT_NE(arc, nullptr);
 
-  LoadPinIndexMap load_pin_map(db_network_);
+  LoadPinIndexMap load_pin_map;
   load_pin_map[load_pin] = 0;
 
   Parasitics* parasitics = scene->parasitics(min_max);

@@ -657,7 +657,7 @@ bool staDriverSlewForSyntheticPi(const Resizer& resizer,
   // caller owns restoring the original Pi model before returning.
   parasitics->setPiModel(parasitic, sample_c2, sample_rpi, sample_c1);
 
-  sta::LoadPinIndexMap load_pin_index_map(resizer.staState()->network());
+  sta::LoadPinIndexMap load_pin_index_map;
   sta::ArcDcalcResult result = resizer.staState()->arcDelayCalc()->gateDelay(
       stage.driver_pin,
       table_worst_arc.ref_arc,

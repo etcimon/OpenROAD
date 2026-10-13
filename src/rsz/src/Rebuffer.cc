@@ -213,7 +213,7 @@ std::tuple<sta::Delay, sta::Delay, sta::Slew> Rebuffer::drvrPinTiming(
     sta::Slew rf_slew = 0;
 
     if (driver_path) {
-      sta::LoadPinIndexMap load_pin_index_map(network_);
+      sta::LoadPinIndexMap load_pin_index_map;
       sta::Slew slew = graph_delay_calc_->edgeFromSlew(
           driver_path->vertex(sta_),
           driver_arc->fromEdge()->asRiseFall(),
@@ -1516,7 +1516,7 @@ float Rebuffer::findBufferLoadLimitImpliedByDriverSlew(sta::LibertyCell* cell)
     for (sta::TimingArcSet* arc_set : cell->timingArcSets()) {
       if (!arc_set->role()->isTimingCheck()) {
         for (sta::TimingArc* arc : arc_set->arcs()) {
-          sta::LoadPinIndexMap load_pin_index_map(network_);
+          sta::LoadPinIndexMap load_pin_index_map;
           sta::ArcDcalcResult dcalc_result
               = arc_delay_calc_->gateDelay(nullptr,
                                            arc,
