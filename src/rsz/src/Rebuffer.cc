@@ -2118,7 +2118,8 @@ void Rebuffer::fullyRebuffer(sta::Pin* user_pin)
   init();
 
   std::vector<sta::Pin*> filtered_pins;
-  const sta::VertexSeq drvrs = sta_->levelizedDrvrVertices();
+  // Read-only scan. The vector is rebuilt if a later edit changes levels.
+  const sta::VertexSeq& drvrs = sta_->levelizedDrvrVertices();
   for (auto drvr : drvrs) {
     sta::Pin* drvr_pin = drvr->pin();
     sta::Net* net = nullptr;

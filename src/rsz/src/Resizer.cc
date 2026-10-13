@@ -3312,8 +3312,10 @@ void Resizer::findResizeSlacks(bool run_journal_restore,
 void Resizer::findResizeSlacks1()
 {
   // Use driver pin slacks rather than Sta::netSlack to save visiting
-  // the net pins and min'ing the slack.
+  // the net pins and min'ing the slack. One required-time pass, then
+  // read the slack stored on each driver. slack(vertex) would search again.
   net_slack_map_.clear();
+  sta_->findRequireds();
   const sta::VertexSeq& drvrs = sta_->levelizedDrvrVertices();
   for (int i = drvrs.size() - 1; i >= 0; i--) {
     sta::Vertex* drvr = drvrs[i];
@@ -3328,7 +3330,7 @@ void Resizer::findResizeSlacks1()
         // Hands off special nets.
         && !db_network_->isSpecial(net)
         && !sta_->isClock(drvr_pin, sta_->cmdMode())) {
-      const sta::Slack slack = sta_->slack(drvr, max_);
+      const sta::Slack slack = sta_->vertexSlack(drvr, max_);
       // Exclude unconstrained nets from ranking and weighting.
       if (!sta::fuzzyInf(slack)) {
         net_slack_map_[net] = slack;

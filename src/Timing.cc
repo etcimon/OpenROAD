@@ -440,24 +440,12 @@ std::vector<EndpointSlack> Timing::getEndpointSlacks(MinMax minmax)
   // Propagate required times once. Per-endpoint slack() repeats that search.
   sta->findRequireds();
   const sta::MinMax* mm = getMinMax(minmax);
-  const sta::SceneSet scenes = sta::Scene::sceneSet(sta->scenes());
   std::vector<EndpointSlack> result;
   result.reserve(sta->endpoints().size());
   for (sta::Vertex* vertex : sta->endpoints()) {
-    sta::Slack worst = sta::MinMax::min()->initValue();
-    sta::VertexPathIterator path_iter(vertex, nullptr, mm, sta);
-    while (path_iter.hasNext()) {
-      sta::Path* path = path_iter.next();
-      if (!scenes.contains(path->scene(sta))) {
-        continue;
-      }
-      const sta::Slack path_slack = path->slack(sta);
-      if (sta::delayLess(path_slack, worst, sta)) {
-        worst = path_slack;
-      }
-    }
     auto [iterm, bterm] = staToDBPin(vertex->pin());
-    result.push_back({iterm, bterm, sta::delayAsFloat(worst)});
+    result.push_back(
+        {iterm, bterm, sta::delayAsFloat(sta->vertexSlack(vertex, mm))});
   }
   return result;
 }

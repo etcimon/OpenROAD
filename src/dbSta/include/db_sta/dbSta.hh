@@ -31,6 +31,12 @@ class OpenRoad;
 
 namespace sta {
 
+// Path slack already stored on the vertex. Does not search.
+// Required times for this vertex must already be current.
+Slack storedVertexSlack(const StaState* sta,
+                        Vertex* vertex,
+                        const MinMax* min_max);
+
 // std::any and typeid do not work on incomplete types
 // talking to the OpenSTA author about implementing these
 // upstream instead. https://github.com/llvm/llvm-project/issues/36746
@@ -233,6 +239,11 @@ class dbSta : public Sta, public odb::dbDatabaseObserver
 
   // Drivers sorted by (level, name) for determinism.
   const VertexSeq& levelizedDrvrVertices();
+
+  // Path slack already stored on the vertex. Does not search.
+  // Required times for this vertex must already be current
+  // (findRequireds, or an endpoint seed from worstSlack).
+  Slack vertexSlack(Vertex* vertex, const MinMax* min_max) const;
   // Discard the cached driver-vertex list. Callers that mutate the timing
   // graph outside the LevelizeObserver path (e.g. dbStaCbk on dbInst
   // create/destroy) must invalidate so the next query rebuilds.

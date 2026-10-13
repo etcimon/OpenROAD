@@ -834,9 +834,11 @@ void RepairTargetCollector::collectViolatingEndpoints()
 {
   violating_endpoints_.clear();
 
+  // One required-time pass for every endpoint. slack() would repeat it.
+  sta_->findRequireds();
   const sta::VertexSet& endpoints = sta_->endpoints();
   for (sta::Vertex* endpoint : endpoints) {
-    const sta::Slack slack = sta_->slack(endpoint, max_);
+    const sta::Slack slack = sta::storedVertexSlack(sta_, endpoint, max_);
     if (sta::fuzzyLess(slack, slack_margin_)) {
       violating_endpoints_.emplace_back(endpoint->pin(), slack);
     }
@@ -926,6 +928,7 @@ void RepairTargetCollector::collectViolatingStartpoints()
   }
 
   const int all_startpoints = startpoints_.size();
+  sta_->findRequireds();
   for (const CachedStartpoint& startpoint : startpoints_) {
     sta::Vertex* vertex = startpoint.drvr_vertex
                               ? graph_->pinDrvrVertex(startpoint.pin)
@@ -939,7 +942,7 @@ void RepairTargetCollector::collectViolatingStartpoints()
       // checkStartpointCache() makes a real occurrence visible.
       continue;
     }
-    const sta::Slack slack = sta_->slack(vertex, max_);
+    const sta::Slack slack = sta::storedVertexSlack(sta_, vertex, max_);
     if (sta::fuzzyLess(slack, slack_margin_)) {
       violating_startpoints_.emplace_back(startpoint.pin, slack);
     }
@@ -1500,12 +1503,12 @@ vector<const sta::Pin*> RepairTargetCollector::collectViolatorsByFaninTraversal(
              delayAsString(slack_threshold, 3, sta_),
              slack_margin);
 
-  // Find critical endpoints (within slack_margin of worst)
+  // worstSlack seeded arrivals. Propagate required times once, then read.
+  sta_->findRequireds();
   const sta::VertexSet& all_endpoints = sta_->endpoints();
   std::vector<sta::Vertex*> critical_endpoints;
-
   for (sta::Vertex* endpoint : all_endpoints) {
-    sta::Slack endpoint_slack = sta_->slack(endpoint, max_);
+    sta::Slack endpoint_slack = sta::storedVertexSlack(sta_, endpoint, max_);
     if (endpoint_slack < slack_threshold) {
       critical_endpoints.push_back(endpoint);
     }

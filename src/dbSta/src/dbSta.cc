@@ -874,8 +874,9 @@ void dbSta::reportCellUsage(odb::dbModule* module,
   }
 }
 
-// Slack already stored on the vertex. Caller has run findRequireds().
-Slack storedVertexSlack(Sta* sta, Vertex* vertex, const MinMax* min_max)
+Slack storedVertexSlack(const StaState* sta,
+                        Vertex* vertex,
+                        const MinMax* min_max)
 {
   const SceneSet scenes = Scene::sceneSet(sta->scenes());
   Slack slack = MinMax::min()->initValue();
@@ -891,6 +892,11 @@ Slack storedVertexSlack(Sta* sta, Vertex* vertex, const MinMax* min_max)
     }
   }
   return slack;
+}
+
+Slack dbSta::vertexSlack(Vertex* vertex, const MinMax* min_max) const
+{
+  return storedVertexSlack(this, vertex, min_max);
 }
 
 // bin_size: fixed bin width in user time units (e.g., ns).
@@ -912,7 +918,7 @@ void dbSta::reportTimingHistogram(int num_bins,
   sta_->findRequireds();
   for (sta::Vertex* vertex : sta_->endpoints()) {
     float slack = sta::delayAsFloat(
-        storedVertexSlack(sta_, vertex, min_max), min_max, sta_);
+        vertexSlack(vertex, min_max), min_max, sta_);
     if (slack != sta::INF) {  // Ignore unconstrained paths.
       histogram.addData(time_unit->staToUser(slack));
     }
