@@ -28,6 +28,7 @@ Callgrind, instruction references:
 | liberty port read from the master term | 14.96e9 | same | same |
 | debug flag tested before the lookup | 14.64e9 | same | same |
 | top-level port read from the pin tag | 14.31e9 | same | same |
+| empty disable sets return before pin decode | 13.46e9 | same | same |
 
 The placed `gcd` netlist at its own clock (period 0.485 ns) finished in
 0.61 s with slack +0.01 ns. TinyRocket at its own 2.03 ns clock finished
@@ -82,8 +83,25 @@ only for the top sentinel, and `instance` returns that sentinel only for
 a block terminal that is not inside a chiplet. The predicate now reads
 the pin tag. Instructions fell to 14,313,398,333. Slack and TNS did not
 change. `instance(pin)` fell from 236 million to 129 million.
-Instruction-cache misses rose from 897,883 to 942,849. `appendBase64` is
-still 393 million, because TinyRocket still asks for degree 9.
+Instruction-cache misses rose from 897,883 to 942,849.
+
+Every timing edge asked whether it was disabled. That query decoded the
+pins and read liberty ports, then looked in the disable sets. With no
+disable commands those sets are empty, so the query now returns before
+the decode. Instructions fell to 13,461,175,547. Slack and TNS did not
+change. `libertyPort(pin)` fell from 329 million to 183 million.
+Instruction-cache misses fell from 942,849 to 886,408.
+
+What is still large, and why it was not rewritten:
+
+- `appendBase64` is still 393 million. TinyRocket asks for degree 9, so
+  the table is decoded. A per-byte decoder was slower.
+- Liberty table evaluation (`findValueOrder2`) is 166 million for about
+  one million bilinear interpolations. The axes are a handful of floats.
+  A vector rewrite would change the interpolated delay.
+- `Tag::matchCmp` is 257 million. Tag order is part of the search.
+- `malloc` and `free` are still about 330 million and 351 million. The
+  calls are spread across the search, not one buffer.
 
 ## Still open, in this repo
 
