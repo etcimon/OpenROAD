@@ -29,6 +29,7 @@ Callgrind, instruction references:
 | debug flag tested before the lookup | 14.64e9 | same | same |
 | top-level port read from the pin tag | 14.31e9 | same | same |
 | empty disable sets return before pin decode | 13.46e9 | same | same |
+| vertex id lookup inlined | 13.43e9 | same | same |
 
 The placed `gcd` netlist at its own clock (period 0.485 ns) finished in
 0.61 s with slack +0.01 ns. TinyRocket at its own 2.03 ns clock finished
@@ -110,6 +111,11 @@ signal port differs, so the flag stayed set. Every `direction(pin)` still
 read liberty, after an extra pin decode. Instructions rose from
 13,461,175,547 to 13,488,608,926. Slack and TNS did not change. That fast
 path was removed.
+
+`Graph::vertex` is an id-to-pointer. It was called 8.35 million times and
+cost 150 million instructions. The body is now inline at the call. The
+same run is 13,429,216,482 instructions. Slack and TNS did not change.
+Instruction-cache misses fell from 886,408 to 821,743.
 
 ## Still open, in this repo
 
