@@ -46,6 +46,13 @@ named function is `base64_decode` at 2.9 percent (445 million), which is
 the remaining one-shot table and Python-init decode, not a per-gate loop.
 No function is a dense float loop above 5 percent, so AVX was not added.
 
+A per-byte Steiner decoder, which stopped before degree 9 when that degree
+was not asked for yet, was measured on the same run. Instructions rose from
+15.37 billion to 15.83 billion. Slack and TNS did not change. That decoder
+was removed. The bulk lookup decode stays. `prepareForThreads` still builds
+degree 9 before the parasitic pass, including when only one thread runs,
+because a later net can ask for it and the bytes are decoded once.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
