@@ -188,6 +188,12 @@ corners. Each table still multiplies by its own scale factor. The same
 run is 12,134,285,106 instructions. `evalOrder2` self cost fell from
 105,060,816 to 3,661,840. Slack and TNS did not change.
 
+Every timing arc of a driver walked the net to recompute a load that
+depends only on the output transition, the scene, and min/max. Later
+arcs of that driver reuse the load. Arc order is unchanged. The same
+run is 11,562,348,144 instructions. `connectedCap` calls fell from
+462,296 to 118,908. Slack and TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
