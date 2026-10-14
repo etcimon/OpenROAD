@@ -103,6 +103,14 @@ What is still large, and why it was not rewritten:
 - `malloc` and `free` are still about 330 million and 351 million. The
   calls are spread across the search, not one buffer.
 
+`direction(pin)` reads the liberty port because a tristate liberty
+direction can differ from the LEF io type. A fast path returned the ODB
+io type when every signal liberty direction matched LEF. On Nangate45 a
+signal port differs, so the flag stayed set. Every `direction(pin)` still
+read liberty, after an extra pin decode. Instructions rose from
+13,461,175,547 to 13,488,608,926. Slack and TNS did not change. That fast
+path was removed.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
