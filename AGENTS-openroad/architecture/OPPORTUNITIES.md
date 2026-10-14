@@ -194,6 +194,13 @@ arcs of that driver reuse the load. Arc order is unchanged. The same
 run is 11,562,348,144 instructions. `connectedCap` calls fell from
 462,296 to 118,908. Slack and TNS did not change.
 
+Both arcs of an edge re-read the from-pin logic constant and the edge
+unateness, and each read looked the vertex up from the pin. Those reads
+now happen once, on the vertex already in hand, and each arc only
+applies its output transition. The same run is 11,384,804,867
+instructions. `pinLoadVertex` calls from `simValue` fell from 2,929,986
+to 29,874. Slack and TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
