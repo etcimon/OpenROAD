@@ -168,6 +168,10 @@ The same run is 12,428,415,795 instructions. Slack and TNS did not change.
 is the wire-edge ordinal. It now counts wire edges in that same order.
 The same run is 12,407,614,809 instructions. Slack and TNS did not change.
 
+`visitEdge` loads the from-path once and then applies the edge's two timing
+arcs in that order. The same run is 12,350,962,570 instructions. Slack and
+TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
