@@ -201,6 +201,12 @@ applies its output transition. The same run is 11,384,804,867
 instructions. `pinLoadVertex` calls from `simValue` fell from 2,929,986
 to 29,874. Slack and TNS did not change.
 
+Pin iteration and pin-vertex lookup asked liberty whether each pin was
+bidirect. That driver vertex is already stored when the pin vertex is
+made, so those walks read the map. The same run is 11,317,007,941
+instructions. `libertyPort` self cost fell from 136,020,678 to
+102,450,276. Slack and TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
