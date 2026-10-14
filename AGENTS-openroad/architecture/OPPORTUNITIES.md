@@ -143,6 +143,12 @@ database flag in `dbNetwork.cc`, so `id` and `libertyPort` inline the
 load. The same run is 12,611,721,808 instructions. `fuzzyEqual` self cost
 fell from 96.5 million to 0.5 million. Slack and TNS did not change.
 
+A four-slot thread-local cache in front of `findValueIndex`, together
+with reading `sta_vertex_id_` directly from `vertexId`, raised the same
+run to 12,658,492,147. Slack and TNS did not change. `findValueIndex`
+rose from 119.8 million to 181.1 million. `vertexId` rose from 81.0
+million to 85.0 million. Both edits were removed.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
