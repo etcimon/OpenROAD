@@ -26,6 +26,7 @@ Callgrind, instruction references:
 | pin maps use pointer hash | 15.37e9 | same | same |
 | degree 9 built when a net asks | 15.35e9 | same | same |
 | liberty port read from the master term | 14.96e9 | same | same |
+| debug flag tested before the lookup | 14.64e9 | same | same |
 
 The placed `gcd` netlist at its own clock (period 0.485 ns) finished in
 0.61 s with slack +0.01 ns. TinyRocket at its own 2.03 ns clock finished
@@ -67,9 +68,15 @@ decodes the pin that `libertyPort` already decoded. For an instance term
 the master term holds the concrete port, so the pin overload now reads
 that port. `port(pin)` fell from 324 million instructions to 52 million,
 which is the callers that still need the port. The same run is
-14,956,314,051 instructions. Slack and TNS did not change. `appendBase64`
-is still 393 million. `Debug::check` is still 230 million and returns
-false when debug is off. `dbNetwork::instance(pin)` is still 236 million.
+14,956,314,051 instructions. Slack and TNS did not change.
+
+`debugPrint` called `Debug::check` on every arrival edge. With no debug
+category enabled, that call only read a false flag. The macro now tests
+the flag first, and the category lookup runs only when debug is on.
+Instructions fell to 14,637,298,787. Slack and TNS did not change.
+Instruction-cache misses rose from 840,994 to 897,883. `appendBase64` is
+still 393 million, because TinyRocket still asks for degree 9.
+`dbNetwork::instance(pin)` is still 236 million.
 
 ## Still open, in this repo
 
