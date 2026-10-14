@@ -216,6 +216,12 @@ Both arcs ask for `-thru` exceptions on every edge. When none are
 recorded, that lookup returns before hashing the pin. The same run is
 11,260,172,596 instructions. Slack and TNS did not change.
 
+Levelization counted incoming search edges in an ordered map. The
+count is one slot per vertex id, and the queue still follows out-edge
+order. The same run is 11,197,719,619 instructions.
+`findTopologicalOrder` inclusive cost fell from 175,853,944 to
+123,398,487. Slack and TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
