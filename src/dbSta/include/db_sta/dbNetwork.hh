@@ -529,7 +529,8 @@ class dbNetwork : public ConcreteNetwork
 
   void setHierarchy() { db_->setHierarchy(true); }
   void disableHierarchy() { db_->setHierarchy(false); }
-  bool hasHierarchy() const { return db_->hasHierarchy(); }
+  // Defined in dbNetwork.cc so this translation unit inlines the bool load.
+  bool hasHierarchy() const;
   bool hasHierarchicalElements() const;
   void reassociateHierFlatNet(odb::dbModNet* mod_net,
                               odb::dbNet* new_flat_net,

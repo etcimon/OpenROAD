@@ -31,6 +31,8 @@ Callgrind, instruction references:
 | empty disable sets return before pin decode | 13.46e9 | same | same |
 | vertex id lookup inlined | 13.43e9 | same | same |
 | empty pin sets are not searched | 13.27e9 | same | same |
+| AVX2 Steiner prefix, on the testharness host | 12.70e9 | same | same |
+| `fuzzyEqual` and the hierarchy flag inlined | 12.61e9 | same | same |
 
 The placed `gcd` netlist at its own clock (period 0.485 ns) finished in
 0.61 s with slack +0.01 ns. TinyRocket at its own 2.03 ns clock finished
@@ -128,15 +130,25 @@ An empty derate table and an empty clock-sense map now return before the
 pin is decoded. The Steiner base64 prefix is decoded with AVX2 when the
 CPU has it, and the scalar loop keeps the tail. ABC's word-wide simulator
 uses the same AVX2 integer AND/OR/NOT. Liberty table interpolation is
-unchanged. These three edits were not put through the TinyRocket
-callgrind. The base64 decoder was checked against the scalar decoder for
-payloads of 0 through 200 bytes, including padding.
+unchanged. The base64 decoder was checked against the scalar decoder for
+payloads of 0 through 200 bytes, including padding. On the testharness
+host that binary is 12,699,620,769 instructions. `Tag::matchCmp`,
+`findValueOrder2`, and `visitFromPath` match the previous profile.
+`base64DecodeAvx2` is 9.8 million instructions. `deratedDelay` did not
+shrink. Slack and TNS did not change. That host has a 32KB 8-way L1I, so
+its instruction-cache misses are not comparable to the earlier profiles.
+
+`fuzzyEqual` is inline in the header. `dbNetwork::hasHierarchy` reads the
+database flag in `dbNetwork.cc`, so `id` and `libertyPort` inline the
+load. The same run is 12,611,721,808 instructions. `fuzzyEqual` self cost
+fell from 96.5 million to 0.5 million. Slack and TNS did not change.
 
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
-  does not remove the virtual call through `Network*`. Do not skip
-  `hasHierarchy()` until a profile shows that branch.
+  does not remove the virtual call through `Network*`. The hierarchy
+  flag is still read. The load lives in `dbNetwork.cc` so that file
+  inlines it.
 - `levelizedDrvrVertices` rebuilds the full sorted vector after one level
   change. An incremental insert is only safe if every caller that holds the
   vector is identified. `repairDesign` must keep its snapshot.

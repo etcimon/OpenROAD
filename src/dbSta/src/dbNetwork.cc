@@ -68,6 +68,7 @@ Recommended conclusion: use map for concrete cells. They are invariant.
 #include "odb/dbTypes.h"
 #include "odb/dbUtil.h"
 #include "odb/geom.h"
+#include "dbDatabase.h"
 #include "sta/ConcreteLibrary.hh"
 #include "sta/ConcreteNetwork.hh"
 #include "sta/FuncExpr.hh"
@@ -2018,6 +2019,14 @@ InstanceNetIterator* dbNetwork::netIterator(const Instance* instance) const
 // Properties::stringProperty.
 
 ////////////////////////////////////////////////////////////////
+
+bool dbNetwork::hasHierarchy() const
+{
+  // Same load as dbDatabase::hasHierarchy. Kept in this file so id() and
+  // libertyPort inline it instead of calling another translation unit.
+  const auto* db = reinterpret_cast<const odb::_dbDatabase*>(db_);
+  return db->hierarchy_;
+}
 
 ObjectId dbNetwork::id(const Pin* pin) const
 {

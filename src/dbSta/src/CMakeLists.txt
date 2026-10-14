@@ -20,6 +20,8 @@ target_include_directories(dbSta_lib
     ${PROJECT_SOURCE_DIR}/include
     ${OPENSTA_HOME}
     ${OPENSTA_HOME}/include/sta
+  PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/odb/src/db
 )
 
 
