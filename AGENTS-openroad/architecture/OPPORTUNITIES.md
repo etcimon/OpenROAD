@@ -164,6 +164,10 @@ edit now bumps an epoch, and each thread keeps the four rise/fall and
 min/max results for the current driver. A hit does not take the mutex.
 The same run is 12,428,415,795 instructions. Slack and TNS did not change.
 
+`annotateLoadDelays` used to hash each load pin to recover an index that
+is the wire-edge ordinal. It now counts wire edges in that same order.
+The same run is 12,407,614,809 instructions. Slack and TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
