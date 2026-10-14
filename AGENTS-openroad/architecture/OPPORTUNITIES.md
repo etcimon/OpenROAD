@@ -182,6 +182,12 @@ raised that run to 12,170,374,466. Slack and TNS did not change. The
 extra pointer checks cost more than the multiply by 1. That edit was
 removed.
 
+The shared bracket still evaluated the bilinear weights twice, once per
+table. Those weights are now computed once and applied to each table's
+corners. Each table still multiplies by its own scale factor. The same
+run is 12,134,285,106 instructions. `evalOrder2` self cost fell from
+105,060,816 to 3,661,840. Slack and TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
