@@ -30,6 +30,7 @@ Callgrind, instruction references:
 | top-level port read from the pin tag | 14.31e9 | same | same |
 | empty disable sets return before pin decode | 13.46e9 | same | same |
 | vertex id lookup inlined | 13.43e9 | same | same |
+| empty pin sets are not searched | 13.27e9 | same | same |
 
 The placed `gcd` netlist at its own clock (period 0.485 ns) finished in
 0.61 s with slack +0.01 ns. TinyRocket at its own 2.03 ns clock finished
@@ -116,6 +117,12 @@ path was removed.
 cost 150 million instructions. The body is now inline at the call. The
 same run is 13,429,216,482 instructions. Slack and TNS did not change.
 Instruction-cache misses fell from 886,408 to 821,743.
+
+Path-delay and disabled-pin queries are membership tests on a pin set.
+With no such constraint the set is empty, and `contains` still entered
+the ordered tree. Those queries now return before the search. The same
+run is 13,273,269,288 instructions. Slack and TNS did not change.
+Instruction-cache misses rose from 821,743 to 913,585.
 
 ## Still open, in this repo
 
