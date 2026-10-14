@@ -177,6 +177,11 @@ delay and slew tables use both of those axes, one bracket is interpolated
 on each table with that table's own scale factor. The same run is
 12,156,847,523 instructions. Slack and TNS did not change.
 
+Skipping the scale multiply when the library has no scale-factor tables
+raised that run to 12,170,374,466. Slack and TNS did not change. The
+extra pointer checks cost more than the multiply by 1. That edit was
+removed.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
