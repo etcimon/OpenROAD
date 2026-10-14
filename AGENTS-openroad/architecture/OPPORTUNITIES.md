@@ -159,6 +159,11 @@ the master terminal raised `libertyPort(pin)` from 173 million to 220
 million and was removed. Delay and slew tables own separate axis
 objects, so a shared bracket was not added on that path.
 
+`findPiElmore` locked the parasitic map on every load of a net. The map
+edit now bumps an epoch, and each thread keeps the four rise/fall and
+min/max results for the current driver. A hit does not take the mutex.
+The same run is 12,428,415,795 instructions. Slack and TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
