@@ -212,6 +212,10 @@ samples of one gate raised that run to 11,324,038,537. Slack and TNS
 did not change. The bracket checks cost more than the searches they
 saved. That edit was removed.
 
+Both arcs ask for `-thru` exceptions on every edge. When none are
+recorded, that lookup returns before hashing the pin. The same run is
+11,260,172,596 instructions. Slack and TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
