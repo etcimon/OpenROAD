@@ -124,6 +124,14 @@ the ordered tree. Those queries now return before the search. The same
 run is 13,273,269,288 instructions. Slack and TNS did not change.
 Instruction-cache misses rose from 821,743 to 913,585.
 
+An empty derate table and an empty clock-sense map now return before the
+pin is decoded. The Steiner base64 prefix is decoded with AVX2 when the
+CPU has it, and the scalar loop keeps the tail. ABC's word-wide simulator
+uses the same AVX2 integer AND/OR/NOT. Liberty table interpolation is
+unchanged. These three edits were not put through the TinyRocket
+callgrind. The base64 decoder was checked against the scalar decoder for
+payloads of 0 through 200 bytes, including padding.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it

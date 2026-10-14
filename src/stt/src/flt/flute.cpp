@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "boost/multi_array.hpp"
+#include "base64_avx.h"
 #include "stt/SteinerTreeBuilder.h"
 
 namespace stt::flt {
@@ -184,6 +185,18 @@ void appendBase64(std::string& dest, const std::string& encoded)
   unsigned char char_array_4[4];
   char char_array_3[3];
   dest.reserve(dest.size() + encoded.size() / 4 * 3 + 3);
+
+  // 32 input characters become 24 output bytes. The scalar loop keeps
+  // the tail, including '=' padding.
+  if (in_len >= 32 && base64Avx2()) {
+    const std::size_t at = dest.size();
+    const std::size_t blocks = static_cast<std::size_t>(in_len) / 32;
+    dest.resize(at + blocks * 24);
+    const std::size_t consumed
+        = base64DecodeAvx2(dest.data() + at, encoded.data(), encoded.size());
+    dest.resize(at + consumed / 32 * 24);
+    in = static_cast<int>(consumed);
+  }
 
   while (in_len > in && encoded[in] != '='
          && value[static_cast<unsigned char>(encoded[in])] >= 0) {
