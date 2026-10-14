@@ -207,6 +207,11 @@ made, so those walks read the map. The same run is 11,317,007,941
 instructions. `libertyPort` self cost fell from 136,020,678 to
 102,450,276. Slack and TNS did not change.
 
+Remembering the input-slew bracket across the effective-capacitance
+samples of one gate raised that run to 11,324,038,537. Slack and TNS
+did not change. The bracket checks cost more than the searches they
+saved. That edit was removed.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
