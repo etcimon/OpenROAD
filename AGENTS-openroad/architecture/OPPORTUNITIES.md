@@ -25,6 +25,7 @@ Callgrind, instruction references:
 | after inlining `staToDb` (`9040699`) | 16.29e9 | same | same |
 | pin maps use pointer hash | 15.37e9 | same | same |
 | degree 9 built when a net asks | 15.35e9 | same | same |
+| liberty port read from the master term | 14.96e9 | same | same |
 
 The placed `gcd` netlist at its own clock (period 0.485 ns) finished in
 0.61 s with slack +0.01 ns. TinyRocket at its own 2.03 ns clock finished
@@ -60,6 +61,15 @@ TinyRocket still asks for degree 9, so that part of the table is still
 decoded. Instructions fell from 15.37 billion to 15,348,915,691. The
 largest named function is `appendBase64` at 2.56 percent (393 million).
 Slack and TNS did not change.
+
+`Network::libertyPort(pin)` calls `port(pin)`, and `dbNetwork::port`
+decodes the pin that `libertyPort` already decoded. For an instance term
+the master term holds the concrete port, so the pin overload now reads
+that port. `port(pin)` fell from 324 million instructions to 52 million,
+which is the callers that still need the port. The same run is
+14,956,314,051 instructions. Slack and TNS did not change. `appendBase64`
+is still 393 million. `Debug::check` is still 230 million and returns
+false when debug is off. `dbNetwork::instance(pin)` is still 236 million.
 
 ## Still open, in this repo
 

@@ -4201,11 +4201,16 @@ LibertyPort* dbNetwork::libertyPort(const Pin* pin) const
   dbBTerm* bterm = nullptr;
   dbModITerm* moditerm = nullptr;
   staToDb(pin, iterm, bterm, moditerm);
-  if (iterm) {
-    LibertyPort* ret = ConcreteNetwork::libertyPort(pin);
-    return ret;
+  if (iterm == nullptr) {
+    return nullptr;
   }
-  return nullptr;
+  // Network::libertyPort(pin) calls port(), which decodes the pin again.
+  // The master term already holds the concrete port.
+  Port* port = dbToSta(iterm->getMTerm());
+  if (port == nullptr || !isConcretePort(port)) {
+    return nullptr;
+  }
+  return ConcreteNetwork::libertyPort(port);
 }
 
 void dbNetwork::registerHierModule(const Cell* cell)
