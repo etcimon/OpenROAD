@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2019-2025, The OpenROAD Authors
 
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -86,6 +87,10 @@ class Flute
   LutType lut_ = nullptr;
   NumSoln numsoln_ = nullptr;
   int lut_valid_d_ = 0;
+  // Index of the next degree in the decoded POWV / POST text. A later
+  // degree continues from here instead of parsing the earlier degrees again.
+  std::size_t pwv_at_ = 0;
+  std::size_t prt_at_ = 0;
 
   // LUTs are initialized to this order at startup.
   static constexpr int kLutInitialDegree = 8;

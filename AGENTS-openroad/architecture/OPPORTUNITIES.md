@@ -24,6 +24,7 @@ Callgrind, instruction references:
 | after the decode change (`6e2f924`) | 17.17e9 | same | same |
 | after inlining `staToDb` (`9040699`) | 16.29e9 | same | same |
 | pin maps use pointer hash | 15.37e9 | same | same |
+| degree 9 built when a net asks | 15.35e9 | same | same |
 
 The placed `gcd` netlist at its own clock (period 0.485 ns) finished in
 0.61 s with slack +0.01 ns. TinyRocket at its own 2.03 ns clock finished
@@ -42,16 +43,23 @@ key order. They now hash the pin pointer. `PinSet` stays ordered by
 database id, so report order of pin sets does not move.
 
 After that change the same run is 15.37 billion instructions. The largest
-named function is `base64_decode` at 2.9 percent (445 million), which is
-the remaining one-shot table and Python-init decode, not a per-gate loop.
+named function was `base64_decode` at 2.9 percent (445 million), which is
+the one-shot Steiner table and Python-init decode, not a per-gate loop.
 No function is a dense float loop above 5 percent, so AVX was not added.
 
 A per-byte Steiner decoder, which stopped before degree 9 when that degree
 was not asked for yet, was measured on the same run. Instructions rose from
 15.37 billion to 15.83 billion. Slack and TNS did not change. That decoder
-was removed. The bulk lookup decode stays. `prepareForThreads` still builds
-degree 9 before the parasitic pass, including when only one thread runs,
-because a later net can ask for it and the bytes are decoded once.
+was removed.
+
+The kept cut uses the same 4-character decode loop and stops after degree
+8 until a net asks for degree 9. One thread does not call
+`prepareForThreads` before the parasitic pass. Raising the table from
+degree 8 to 9 continues the parse instead of reading degrees 4–8 again.
+TinyRocket still asks for degree 9, so that part of the table is still
+decoded. Instructions fell from 15.37 billion to 15,348,915,691. The
+largest named function is `appendBase64` at 2.56 percent (393 million).
+Slack and TNS did not change.
 
 ## Still open, in this repo
 
@@ -61,8 +69,9 @@ because a later net can ask for it and the bytes are decoded once.
 - `levelizedDrvrVertices` rebuilds the full sorted vector after one level
   change. An incremental insert is only safe if every caller that holds the
   vector is identified. `repairDesign` must keep its snapshot.
-- FLUTE still re-parses the decoded table when the degree rises. The bytes
-  are cached. The parse is the remaining cost.
+- FLUTE degree 9 is still decoded on TinyRocket because a net asks for it.
+  The bytes are decoded once. Do not replace the 4-character loop with a
+  per-byte reader.
 - `check_sanity` still builds two `std::set`s per driver to compare loads.
   Membership can be a hash set. Warning order is the iteration order of the
   OpenDB side. Keep that order if a test goldens the message text.

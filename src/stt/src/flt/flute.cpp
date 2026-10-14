@@ -13,6 +13,7 @@
 #include <cctype>
 #include <climits>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -24,7 +25,6 @@
 
 #include "boost/multi_array.hpp"
 #include "stt/SteinerTreeBuilder.h"
-#include "utl/decode.h"
 
 namespace stt::flt {
 
@@ -145,19 +145,191 @@ static const char* readDecimalInt(const char* s, int& value)
   return s;
 }
 
+namespace {
+
+// Degrees 4-8 end at these decoded offsets (the 'd' of the degree-9 header).
+// The decode stops on the next base64 group so that header is in the buffer.
+// Measured by the same parse as initLUT against etc/POWV9.dat and POST9.dat.
+static constexpr std::size_t kPwvDegree8End = 195626;
+static constexpr std::size_t kPrtDegree8End = 341142;
+static constexpr std::size_t kPwvBytesThroughDegree8 = 195627;
+static constexpr std::size_t kPrtBytesThroughDegree8 = 341145;
+
+const int8_t* base64Values()
+{
+  static int8_t table[256];
+  static const bool ready = [] {
+    for (int i = 0; i < 256; i++) {
+      table[i] = -1;
+    }
+    const char alphabet[]
+        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    for (int i = 0; alphabet[i] != '\0'; i++) {
+      table[static_cast<unsigned char>(alphabet[i])] = static_cast<int8_t>(i);
+    }
+    return true;
+  }();
+  (void) ready;
+  return table;
+}
+
+// Same 4-character loop as utl::base64_decode. A per-byte reader was slower
+// than decoding the whole table, so the only cut is how many groups run.
+void appendBase64(std::string& dest, const std::string& encoded)
+{
+  const int8_t* const value = base64Values();
+  const int in_len = static_cast<int>(encoded.size());
+  int i = 0;
+  int in = 0;
+  unsigned char char_array_4[4];
+  char char_array_3[3];
+  dest.reserve(dest.size() + encoded.size() / 4 * 3 + 3);
+
+  while (in_len > in && encoded[in] != '='
+         && value[static_cast<unsigned char>(encoded[in])] >= 0) {
+    char_array_4[i++] = static_cast<unsigned char>(encoded[in]);
+    in++;
+    if (i == 4) {
+      for (i = 0; i < 4; i++) {
+        char_array_4[i] = static_cast<unsigned char>(value[char_array_4[i]]);
+      }
+
+      char_array_3[0]
+          = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+      char_array_3[1]
+          = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+      char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+      dest.append(char_array_3, 3);
+      i = 0;
+    }
+  }
+
+  if (i) {
+    int vals[4];
+    for (int j = 0; j < i; j++) {
+      vals[j] = value[char_array_4[j]];
+    }
+    for (int j = i; j < 4; j++) {
+      vals[j] = -1;
+    }
+
+    char_array_3[0] = (vals[0] << 2) + ((vals[1] & 0x30) >> 4);
+    char_array_3[1] = ((vals[1] & 0xf) << 4) + ((vals[2] & 0x3c) >> 2);
+    char_array_3[2] = ((vals[2] & 0x3) << 6) + vals[3];
+
+    dest.append(char_array_3, i - 1);
+  }
+}
+
+std::string sliceEncoded(const char* const* chunks,
+                         std::size_t begin,
+                         std::size_t count)
+{
+  std::string out;
+  if (count != std::numeric_limits<std::size_t>::max()) {
+    out.reserve(count);
+  }
+  std::size_t seen = 0;
+  for (std::size_t ci = 0; chunks[ci] != nullptr && out.size() < count; ++ci) {
+    const char* chunk = chunks[ci];
+    const std::size_t len = std::strlen(chunk);
+    if (seen + len <= begin) {
+      seen += len;
+      continue;
+    }
+    const std::size_t local = (begin > seen) ? (begin - seen) : 0;
+    const std::size_t avail = len - local;
+    const std::size_t take = std::min(avail, count - out.size());
+    out.append(chunk + local, take);
+    seen += len;
+  }
+  return out;
+}
+
+struct CachedTable
+{
+  std::size_t encoded_at = 0;
+  std::string bytes;
+  bool done = false;
+};
+
+void extendDecoded(CachedTable& table,
+                   const char* const* chunks,
+                   std::size_t min_bytes)
+{
+  if (table.done || table.bytes.size() >= min_bytes) {
+    return;
+  }
+  const std::size_t need = min_bytes - table.bytes.size();
+  const std::size_t aligned = (need + 2) / 3 * 3;
+  const std::size_t in_count = aligned / 3 * 4;
+  std::string encoded = sliceEncoded(chunks, table.encoded_at, in_count);
+  table.encoded_at += encoded.size();
+  if (encoded.size() < in_count) {
+    table.done = true;
+  }
+  appendBase64(table.bytes, encoded);
+}
+
+void finishDecoded(CachedTable& table, const char* const* chunks)
+{
+  if (table.done) {
+    return;
+  }
+  std::string encoded = sliceEncoded(
+      chunks, table.encoded_at, std::numeric_limits<std::size_t>::max());
+  table.encoded_at += encoded.size();
+  table.done = true;
+  if (!encoded.empty()) {
+    appendBase64(table.bytes, encoded);
+  }
+}
+
+CachedTable& powvTable()
+{
+  static CachedTable table;
+  return table;
+}
+
+CachedTable& postTable()
+{
+  static CachedTable table;
+  return table;
+}
+
+}  // namespace
+
 // Init LUTs from base64 encoded string variables.
 void Flute::initLUT(const int to_d, LutType lut, NumSoln numsoln)
 {
-  // Degree 8 is decoded at startup and degree 9 later. The bytes do not
-  // change, so decode each table once.
-  static const std::string pwv_string = utl::base64_decode(powv9);
-  const char* pwv = pwv_string.c_str();
+  if (to_d <= lut_valid_d_) {
+    return;
+  }
 
-  static const std::string prt_string
-      = kConstructRouting ? utl::base64_decode(post9) : std::string();
-  const char* prt = kConstructRouting ? prt_string.c_str() : nullptr;
+  // The bytes never change. Degree 9 stays encoded until a net asks for it.
+  CachedTable& pwv_table = powvTable();
+  CachedTable& prt_table = postTable();
+  if (to_d >= kMaxLutDegree) {
+    finishDecoded(pwv_table, powv9);
+    if (kConstructRouting) {
+      finishDecoded(prt_table, post9);
+    }
+  } else {
+    extendDecoded(pwv_table, powv9, kPwvBytesThroughDegree8);
+    if (kConstructRouting) {
+      extendDecoded(prt_table, post9, kPrtBytesThroughDegree8);
+    }
+  }
 
-  for (int d = 4; d <= to_d; d++) {
+  const int from_d = std::max(4, lut_valid_d_ + 1);
+  const char* const pwv_base = pwv_table.bytes.data();
+  const char* pwv = pwv_base + pwv_at_;
+  const char* const prt_base
+      = kConstructRouting ? prt_table.bytes.data() : nullptr;
+  const char* prt = kConstructRouting ? prt_base + prt_at_ : nullptr;
+
+  for (int d = from_d; d <= to_d; d++) {
     if (pwv[0] == 'd' && pwv[1] == '=') {
       pwv = readDecimalInt(pwv + 2, d);
     }
@@ -220,6 +392,23 @@ void Flute::initLUT(const int to_d, LutType lut, NumSoln numsoln)
       }
     }
   }
+  pwv_at_ = static_cast<std::size_t>(pwv - pwv_base);
+  if (kConstructRouting) {
+    prt_at_ = static_cast<std::size_t>(prt - prt_base);
+  }
+  if (to_d == kLutInitialDegree) {
+    const bool boundary_ok
+        = pwv_at_ == kPwvDegree8End && pwv_base[pwv_at_] == 'd'
+          && (!kConstructRouting
+              || (prt_at_ == kPrtDegree8End && prt_base[prt_at_] == 'd'));
+    if (!boundary_ok) {
+      std::fprintf(stderr,
+                   "FLUTE degree-8 boundary changed: pwv %zu prt %zu\n",
+                   pwv_at_,
+                   prt_at_);
+      std::abort();
+    }
+  }
   lut_valid_d_ = to_d;
 }
 
@@ -234,7 +423,7 @@ void Flute::ensureLUT(const int d)
     readLUT();
   }
   if (d > lut_valid_d_ && d <= kMaxLutDegree) {
-    initLUT(kMaxLutDegree, lut_, numsoln_);
+    initLUT(d, lut_, numsoln_);
   }
 }
 

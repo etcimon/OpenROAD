@@ -811,7 +811,12 @@ void EstimateParasitics::estimateWireParasitics(sta::SpefWriter* spef_writer)
                   || logger_->debugCheck(EST, "steiner", 1)
               ? 1
               : sta_->threadCount();
-    stt_builder_->prepareForThreads();
+    // Degree 9 is most of the Steiner table. Build it before the nets only
+    // when several threads would race on first use. One thread fills a
+    // degree when a net asks for it.
+    if (threads > 1) {
+      stt_builder_->prepareForThreads();
+    }
     std::vector<std::unique_ptr<sta::ArcDelayCalc>> calcs;
     calcs.reserve(threads);
     for (int i = 0; i < threads; ++i) {
