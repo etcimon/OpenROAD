@@ -149,6 +149,16 @@ run to 12,658,492,147. Slack and TNS did not change. `findValueIndex`
 rose from 119.8 million to 181.1 million. `vertexId` rose from 81.0
 million to 85.0 million. Both edits were removed.
 
+`deratedDelay` multiplies by 1 when no derate is set, and it used to
+look the factor up first. It now skips that lookup. `Tag::matchCmp`
+compares a key packed in the existing field order and falls through to
+the clock-pin and state tail only when the keys match. The same run is
+12,442,859,625 instructions. `matchCmp` fell from 256.5 million to 141.7
+million. Slack and TNS did not change. A liberty-port pointer cached on
+the master terminal raised `libertyPort(pin)` from 173 million to 220
+million and was removed. Delay and slew tables own separate axis
+objects, so a shared bracket was not added on that path.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
