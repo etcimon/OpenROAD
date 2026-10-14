@@ -27,6 +27,7 @@ Callgrind, instruction references:
 | degree 9 built when a net asks | 15.35e9 | same | same |
 | liberty port read from the master term | 14.96e9 | same | same |
 | debug flag tested before the lookup | 14.64e9 | same | same |
+| top-level port read from the pin tag | 14.31e9 | same | same |
 
 The placed `gcd` netlist at its own clock (period 0.485 ns) finished in
 0.61 s with slack +0.01 ns. TinyRocket at its own 2.03 ns clock finished
@@ -74,9 +75,15 @@ which is the callers that still need the port. The same run is
 category enabled, that call only read a false flag. The macro now tests
 the flag first, and the category lookup runs only when debug is on.
 Instructions fell to 14,637,298,787. Slack and TNS did not change.
-Instruction-cache misses rose from 840,994 to 897,883. `appendBase64` is
+Instruction-cache misses rose from 840,994 to 897,883.
+
+`isTopLevelPort` called `instance` and then `parent`. The parent is null
+only for the top sentinel, and `instance` returns that sentinel only for
+a block terminal that is not inside a chiplet. The predicate now reads
+the pin tag. Instructions fell to 14,313,398,333. Slack and TNS did not
+change. `instance(pin)` fell from 236 million to 129 million.
+Instruction-cache misses rose from 897,883 to 942,849. `appendBase64` is
 still 393 million, because TinyRocket still asks for degree 9.
-`dbNetwork::instance(pin)` is still 236 million.
 
 ## Still open, in this repo
 

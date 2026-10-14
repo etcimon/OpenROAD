@@ -326,6 +326,7 @@ class dbNetwork : public ConcreteNetwork
   using ConcreteNetwork::isLeaf;
   bool isLeaf(const Instance* instance) const override;
   bool isLeaf(const Pin* pin) const override;
+  bool isTopLevelPort(const Pin* pin) const override;
   Port* findPort(const Cell* cell, std::string_view name) const override;
   Instance* findInstance(std::string_view path_name) const override;
   Instance* findChild(const Instance* parent,

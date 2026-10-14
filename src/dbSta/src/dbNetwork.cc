@@ -1666,6 +1666,29 @@ bool dbNetwork::isLeaf(const Pin* pin) const
   return !moditerm;
 }
 
+bool dbNetwork::isTopLevelPort(const Pin* pin) const
+{
+  // parent(instance(pin)) is null only when instance(pin) is the top
+  // sentinel. instance() returns that sentinel for a block terminal that
+  // is not an inner terminal of a chiplet.
+  dbITerm* iterm = nullptr;
+  dbBTerm* bterm = nullptr;
+  dbModITerm* moditerm = nullptr;
+  staToDb(pin, iterm, bterm, moditerm);
+  (void) iterm;
+  (void) moditerm;
+  if (bterm == nullptr) {
+    return false;
+  }
+  if (has3DicChip()) {
+    auto it = block_to_chip_inst_.find(bterm->getBlock());
+    if (it != block_to_chip_inst_.end()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool dbNetwork::isLeaf(const Instance* instance) const
 {
   if (instance == top_instance_) {
