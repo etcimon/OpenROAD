@@ -172,6 +172,11 @@ The same run is 12,407,614,809 instructions. Slack and TNS did not change.
 arcs in that order. The same run is 12,350,962,570 instructions. Slack and
 TNS did not change.
 
+Identical liberty index vectors share one `TableAxis`. When a gate's
+delay and slew tables use both of those axes, one bracket is interpolated
+on each table with that table's own scale factor. The same run is
+12,156,847,523 instructions. Slack and TNS did not change.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
