@@ -10,4 +10,6 @@ or_integration_tests(
     pd_gcd
 )
 
-add_subdirectory(cpp)
+if(ENABLE_TESTS)
+  add_subdirectory(cpp)
+endif()
