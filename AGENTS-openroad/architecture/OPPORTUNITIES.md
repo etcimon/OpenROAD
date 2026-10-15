@@ -222,6 +222,16 @@ order. The same run is 11,197,719,619 instructions.
 `findTopologicalOrder` inclusive cost fell from 175,853,944 to
 123,398,487. Slack and TNS did not change.
 
+A scalar arc delay with no derate table is already the stored value, so
+that path returns it. Statistical delays still multiply. Tag order
+compares the packed key and calls the full match only when the keys
+tie. An order-2 liberty grid is also stored row-major. Levelize fanin
+sits on the destination vertex, and the queue still follows out-edge
+order. The 4-input truth minterm maps stay on the stack. The same run
+is 11,066,417,071 instructions. `Tag::matchCmp` self cost fell from
+141,684,418 to 78,848. Slack and TNS did not change.
+`visitFromPathPrefix` stayed at 209,355,132.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
