@@ -232,6 +232,68 @@ is 11,066,417,071 instructions. `Tag::matchCmp` self cost fell from
 141,684,418 to 78,848. Slack and TNS did not change.
 `visitFromPathPrefix` stayed at 209,355,132.
 
+## Flow-metric parity with upstream (`test/aes_nangate45`, `test/aes_sky130hd`)
+
+Measured 2026-10-15 on ovh_calltorch (12 cores, GCC 13.3, Boost 1.89,
+Ubuntu 24.04), `test/regression <design>` with `OPENROAD_EXE` pointing at
+each binary. "Stock" is upstream `9b7414e` with its own submodule pins
+(OpenSTA `e983e15b`, ABC `d527cfab`), built with the same cmake options.
+"g6lc" is this tree at `1569c1b` (OpenSTA `17efc5a9`, ABC `452bc96a`).
+
+| Metric | stock | g6lc | limit |
+|---|---|---|---|
+| aes_nangate45 `RSZ::repair_design_buffer_count` | 823 | 823 | 812 |
+| aes_nangate45 `RSZ::worst_slack_max` | −0.18107 | −0.18107 | −0.285 |
+| aes_nangate45 `DRT::worst_slack_max` | −0.30017 | −0.30017 | −0.387 |
+| aes_nangate45 wall | 200 s | 169 s | |
+| aes_sky130hd `RSZ::repair_design_buffer_count` | 921 | 921 | 1086 |
+| aes_sky130hd `RSZ::worst_slack_max` | −1.02300 | −1.02300 | −1.112 |
+| aes_sky130hd `DRT::worst_slack_max` | −1.70153 | −1.70153 | −1.677 |
+| aes_sky130hd wall | 483 s | 402 s | |
+
+Every metric in both `.metrics` files is identical between the two
+binaries. After `estimate_parasitics -placement`, and again after
+`repair_design`, a dump of every net capacitance and every pin slew,
+slack and arrival (75,761 and 78,230 values) has 0 differing lines, and
+the post-repair DEF has the same md5. The global-placement HPWL
+(313891.03 / 457457.55 um) matches the numbers upstream recorded in
+`test/aes_nangate45.metrics`, so the divergence from upstream's recorded
+694 buffers starts inside `repair_design` and is present in the unmodified
+upstream build. Upstream `d44527a2` (2026-10-08, the commit that recorded
+the 694) built the same way also gives 823 with the same HPWL, so the gap
+is the build environment, not a code change between 10-08 and 10-13:
+upstream's `repair_design` result depends on the toolchain (GCC 13.3 /
+Boost 1.89 here versus whatever recorded the `.metrics`). The same 823
+comes out of a second host (WSL, GCC 13.3) with a byte-identical
+post-repair DEF. The two limit misses the flow regression reports are
+therefore upstream's at this base commit in this environment, not an
+effect of the timing cuts above. `test/aes_nangate45.metrics_limits` and
+`test/aes_sky130hd.metrics_limits` are unchanged upstream as of
+2026-10-15. Finding the toolchain-dependent step in upstream
+`repair_design` (pointer-keyed hash iteration or an unstable sort on
+equal keys are the usual causes) would make the metric reproducible; it
+is not one of the cuts in this file.
+
+## Profile-guided build
+
+GCC `-fprofile-generate` / `-fprofile-use` on the g6lc tip, trained on the
+aes_nangate45 placement + `repair_design` and CTS + `repair_timing` halves
+and the aes_sky130hd equivalents (one build dir for both phases so the
+`.gcda` names match; ccache off). Same host, three runs each, same
+inputs:
+
+| Step | plain | PGO |
+|---|---:|---:|
+| aes_nangate45 `repair_design` tail | 4.30 s | 3.53 s |
+| aes_nangate45 CTS + `repair_timing` tail | 38.9 s | 29.3 s |
+
+Every `RD_RESULT` / `RT_RESULT` metric and the timing dump are identical
+to the plain build. `build-platform/scripts/install-openroad-g6lc.sh`
+exposes this as `OPENROAD_PGO=1` (training: `test/aes_nangate45.tcl` plus
+a gate-level `report_checks` run); both phases are full builds. PGO does
+not change floating-point semantics, so it is a speed lever that can be
+applied without re-running the parity check above.
+
 ## Still open, in this repo
 
 - `dbNetwork::id` remains for ordered `PinSet` comparisons. Inlining it
